@@ -7,24 +7,41 @@
 <body>
 <h1>My page</h1>
 <button onclick="startOperation()">Start operation</button>
-
+<ul id="events"></ul>
 <script>
     async function startOperation() {
         let result = await fetch("https://localhost:7105/operations", {
             method: "POST",
         });
-
+        let eventsUl = document.getElementById("events");
         let body = await result.json();
-
+        let newOl = document.createElement("ol");
+        newOl.innerHTML = "started!";
+        eventsUl.appendChild(newOl);
         const evtSource = new EventSource(body.links[0].href);
 
         evtSource.addEventListener("pending", (event) => {
+            let newOl = document.createElement("ol");
+            newOl.innerHTML = "pending at: " + JSON.parse(event.data).timestamp;
+            eventsUl.appendChild(newOl);
             console.log("pending", event.data);
         });
 
-        evtSource.addEventListener("completed", (event) => {
+        evtSource.addEventListener("completed", async (event) => {
+            let newOl = document.createElement("ol");
+            let data = JSON.parse(event.data);
+            newOl.innerHTML = "completed at: " + data.timestamp;
+            eventsUl.appendChild(newOl);
             console.log("completed", event.data);
             evtSource.close();
+
+            let result = await fetch(data.resource_uri, {
+                method: "GET",
+            });
+            let body = await result.text();
+            let getOL = document.createElement("ol");
+            getOL.innerHTML = "get response: " + body;
+            eventsUl.appendChild(getOL);
         });
     }
 </script>

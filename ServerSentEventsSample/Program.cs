@@ -13,14 +13,15 @@ app.MapPost("/operations", (HttpContext httpContext, LinkGenerator linkGenerator
     {
         id,
         links =
-        new[]
-        {
-            new Link("status_check",linkGenerator.GetUriByName(httpContext, Names.StatusCheck, new { id })!,"EventSource")
-        }
+            new[]
+            {
+                new Link("status_check", linkGenerator.GetUriByName(httpContext, Names.StatusCheck, new { id })!,
+                    "EventSource")
+            }
     };
 }).WithName(Names.CreateOperation);
 
-app.MapGet("/operations/{id}/status", async (string id, HttpContext httpContext) =>
+app.MapGet("/operations/{id}/status", async (string id, HttpContext httpContext, LinkGenerator linkGenerator) =>
 {
     if (tasks.TryGetValue(id, out var task))
     {
@@ -34,12 +35,21 @@ app.MapGet("/operations/{id}/status", async (string id, HttpContext httpContext)
         }
 
         await httpContext.Response.WriteAsync("event: completed\n");
-        await httpContext.Response.WriteAsync($"data: {{ \"timestamp\": \"{DateTimeOffset.UtcNow:O}\" }}\n\n");
+        await httpContext.Response.WriteAsync(
+            $"data: {{ \"timestamp\": \"{DateTimeOffset.UtcNow:O}\", \"resource_uri\":\"{linkGenerator.GetUriByName(httpContext, Names.GetOperation, new { id })}\" }}\n\n");
         await httpContext.Response.Body.FlushAsync();
     }
 }).WithName(Names.StatusCheck);
 
-app.MapGet("/operations/{id}", async (string id) => { }).WithName(Names.GetOperation);
+app.MapGet("/operations/{id}", (string id) =>
+{
+    if (tasks.TryGetValue(id, out var _))
+    {
+        return Results.Ok(new { msg = "Resource was created" });
+    }
+
+    return Results.NotFound();
+}).WithName(Names.GetOperation);
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
@@ -47,6 +57,7 @@ app.UseHttpsRedirection();
 app.Run();
 
 sealed record Link(string Rel, string Href, string Action);
+
 static class Names
 {
     public const string GetOperation = "get_operation";
