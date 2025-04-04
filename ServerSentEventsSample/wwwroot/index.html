@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<h1>My page</h1>
+<button onclick="startOperation()">Start operation</button>
+
+<script>
+    async function startOperation() {
+        let result = await fetch("https://localhost:7105/operations", {
+            method: "POST",
+        });
+
+        let body = await result.json();
+
+        const evtSource = new EventSource(body.links[0].href);
+
+        evtSource.addEventListener("pending", (event) => {
+            console.log("pending", event.data);
+        });
+
+        evtSource.addEventListener("completed", (event) => {
+            console.log("completed", event.data);
+            evtSource.close();
+        });
+    }
+</script>
+</body>
+</html>
